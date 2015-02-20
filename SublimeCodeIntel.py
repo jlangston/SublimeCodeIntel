@@ -213,6 +213,7 @@ def show_auto_complete(view, on_query_info,
             'next_completion_if_showing': next_completion_if_showing,
             'auto_complete_commit_on_tab': auto_complete_commit_on_tab,
         })
+        
     completions[view.id()] = on_query_info
     sublime.set_timeout(_show_auto_complete, 0)
 
@@ -287,8 +288,42 @@ def tooltip(view, calltips, text_in_current_line, original_pos, lang):
         # Insert tooltip snippet
         snippets.extend((('  ' if i > 0 else '') + l, snippet or '${0}') for i, l in enumerate(measured_tips))
 
+        # def render_tooltip(ftype, msg):
+        def render_tooltip(msg):
+          output = '''
+            <style>
+              div {
+                font-size: 14px;
+              }
+              .bold{
+                font-weight: bold
+              }
+              p, i{
+                margin: 2px;
+              }
+            </style>
+          '''
+          output = output + '<div>{}</div>'.format(msg)
+          # url = '<div><a href={url}>{url}</a></div>'
+          # doc = '<div>{doc}</div>'
+
+          # if ftype['url']:
+          #   output += url.format(url=ftype['url'])
+          # if ftype['doc']:
+          #   output += doc.format(doc=ftype['doc'])
+          return output
+
     if codeintel_tooltips == 'popup':
-        tooltip_popup(view, snippets)
+        # tooltip_popup(view, snippets)
+        calltip_list = []
+        for idx, tip in enumerate(list(zip(*snippets))[0]):
+            # if (idx % 2 == 0):  
+            if (idx == 0):  
+                calltip_list.append('<i class="bold">' + tip + '</i>')
+            else: 
+                calltip_list.append('<p>' + tip + '</p>')
+        text = '\n'.join(calltip_list)
+        view.show_popup(render_tooltip(text), location=-1,  max_width=600)
     elif codeintel_tooltips in ('status', 'panel'):
         if codeintel_tooltips == 'status':
             set_status(view, 'tip', text, timeout=15000)
@@ -1448,7 +1483,7 @@ class PythonCodeIntel(sublime_plugin.EventListener):
             if exclude_scope in sublime_scope:
                 return
 
-        if not settings_manager.get('codeintel_live', default=True, language=lang):
+        if not lang or lang.lower() not in [l.lower() for l in settings_manager.get('codeintel_enabled_languages', [])]:
             # restore the original sublime auto_complete settings from Preferences.sublime-settings file in User package
             # this is for files with mixed languages (HTML/PHP)
             view.settings().set('auto_complete', settings_manager.sublime_auto_complete)
@@ -1465,9 +1500,6 @@ class PythonCodeIntel(sublime_plugin.EventListener):
         sel = view_sel[0]
         pos = sel.end()
         next_char = view.substr(sublime.Region(pos - 1, pos))
-
-        if next_char == '\n':
-            return
 
         is_fill_char = next_char and next_char in cpln_fillup_chars.get(lang, '')
         is_stop_char = next_char and next_char in cpln_stop_chars.get(lang, '')
@@ -1524,6 +1556,11 @@ class PythonCodeIntel(sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         vid = view.id()
+
+        lang = guess_lang(view)
+        if not lang or lang.lower() not in [l.lower() for l in settings_manager.get('codeintel_enabled_languages', [])]:
+            # lang is not ci enabled. Dont mess with the default completions!
+            return []
 
         # add sublime completions to the mix / not recomended
         sublime_word_completions = False
@@ -1754,7 +1791,7 @@ class CodeintelCommand(sublime_plugin.TextCommand):
 
 
 class SublimecodeintelWindowCommand(sublime_plugin.WindowCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         view = self.window.active_view()
         return bool(view)
 
@@ -1782,17 +1819,17 @@ class SublimecodeintelCommand(SublimecodeintelWindowCommand):
 
 
 class SublimecodeintelEnableCommand(SublimecodeintelCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelEnableCommand, self).is_enabled(False)
 
 
 class SublimecodeintelDisableCommand(SublimecodeintelCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelDisableCommand, self).is_enabled(True)
 
 
 class SublimecodeintelResetCommand(SublimecodeintelCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelResetCommand, self).is_enabled()
 
 
@@ -1814,20 +1851,20 @@ class SublimecodeintelLiveCommand(SublimecodeintelCommand):
 
 
 class SublimecodeintelEnableLiveCommand(SublimecodeintelLiveCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelEnableLiveCommand, self).is_enabled(False, False)
 
 
 class SublimecodeintelDisableLiveCommand(SublimecodeintelLiveCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelDisableLiveCommand, self).is_enabled(True, False)
 
 
 class SublimecodeintelEnableLiveLangCommand(SublimecodeintelLiveCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelEnableLiveLangCommand, self).is_enabled(False, True)
 
 
 class SublimecodeintelDisableLiveLangCommand(SublimecodeintelLiveCommand):
-    def is_enabled(self, *args):
+    def is_enabled(self):
         return super(SublimecodeintelDisableLiveLangCommand, self).is_enabled(True, True)
