@@ -319,9 +319,11 @@ def tooltip(view, calltips, text_in_current_line, original_pos, lang):
         for idx, tip in enumerate(list(zip(*snippets))[0]):
             # if (idx % 2 == 0):  
             if (idx == 0):  
-                calltip_list.append('<i class="bold">' + tip + '</i>')
+                tip = '<i class="bold">' + tip + '</i>'
             else: 
-                calltip_list.append('<p>' + tip + '</p>')
+                tip = '<p>' + tip + '</p>'
+            if tip not in calltip_list:
+                calltip_list.append(tip)
         text = '\n'.join(calltip_list)
         view.show_popup(render_tooltip(text), location=-1,  max_width=600)
     elif codeintel_tooltips in ('status', 'panel'):
