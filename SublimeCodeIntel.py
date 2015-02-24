@@ -288,7 +288,6 @@ def tooltip(view, calltips, text_in_current_line, original_pos, lang):
         # Insert tooltip snippet
         snippets.extend((('  ' if i > 0 else '') + l, snippet or '${0}') for i, l in enumerate(measured_tips))
 
-        # def render_tooltip(ftype, msg):
         def render_tooltip(msg):
           output = '''
             <style>
@@ -304,25 +303,20 @@ def tooltip(view, calltips, text_in_current_line, original_pos, lang):
             </style>
           '''
           output = output + '<div>{}</div>'.format(msg)
-          # url = '<div><a href={url}>{url}</a></div>'
-          # doc = '<div>{doc}</div>'
-
-          # if ftype['url']:
-          #   output += url.format(url=ftype['url'])
-          # if ftype['doc']:
-          #   output += doc.format(doc=ftype['doc'])
           return output
 
     if codeintel_tooltips == 'popup':
         # tooltip_popup(view, snippets)
         calltip_list = []
+        tips_list = []
         for idx, tip in enumerate(list(zip(*snippets))[0]):
-            # if (idx % 2 == 0):  
-            if (idx == 0):  
-                tip = '<i class="bold">' + tip + '</i>'
-            else: 
-                tip = '<p>' + tip + '</p>'
-            if tip not in calltip_list:
+            if tip not in tips_list:
+                # if (idx % 2 == 0):  
+                tips_list.append(tip)
+                if (idx == 0):  
+                    tip = '<i class="bold">' + tip + '</i>'
+                else: 
+                    tip = '<p>' + tip + '</p>'
                 calltip_list.append(tip)
         text = '\n'.join(calltip_list)
         view.show_popup(render_tooltip(text), location=-1,  max_width=600)
